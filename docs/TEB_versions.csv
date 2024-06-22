@@ -1,0 +1,13 @@
+﻿Version,Size (x86),Size (x64)
+3.10,0x0F20,
+3.50 to 3.51,0x0F28,
+4.0,0x0F88,
+5.0,0x0FA4,
+early 5.1 (before SP2),0x0FB4,
+late 5.1 (SP2 and higher),0x0FB8,
+early 5.2 (before SP1),0x0FB8,
+late 5.2 (SP1 and higher),0x0FBC,0x17D8
+6.0,0x0FF8,0x1828
+6.1,0x0FE4,0x1818
+6.2 to 6.3,0x0FE8,0x1820
+10.0 to 2004,0x1000,0x1838
