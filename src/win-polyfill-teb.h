@@ -8,23 +8,15 @@
 
 #define STATIC_UNICODE_BUFFER_LENGTH 261
 #define WIN32_CLIENT_INFO_LENGTH 62
+#define GDI_BATCH_BUFFER_SIZE 310
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef struct _PEB PEB;
-typedef struct _TEB_ACTIVE_FRAME_CONTEXT
-{
-  ULONG Flags;
-  PSTR FrameName;
-} TEB_ACTIVE_FRAME_CONTEXT, *PTEB_ACTIVE_FRAME_CONTEXT;
-typedef struct _TEB_ACTIVE_FRAME
-{
-  ULONG Flags;
-  struct _TEB_ACTIVE_FRAME *Previous;
-  PTEB_ACTIVE_FRAME_CONTEXT Context;
-} TEB_ACTIVE_FRAME, *PTEB_ACTIVE_FRAME;
+typedef struct _TEB_ACTIVE_FRAME TEB_ACTIVE_FRAME, *PTEB_ACTIVE_FRAME;
+typedef struct _RTL_ACTIVATION_CONTEXT_STACK_FRAME *PRTL_ACTIVATION_CONTEXT_STACK_FRAME;
 
 typedef struct _ACTIVATION_CONTEXT_STACK
 {
@@ -36,24 +28,24 @@ typedef struct _ACTIVATION_CONTEXT_STACK
       ULONG NextCookieSequenceNumber;
       struct _RTL_ACTIVATION_CONTEXT_STACK_FRAME *ActiveFrame;
       LIST_ENTRY FrameListCache;
-    } ver_5_0;
+    } nt_5_0;
     struct
     {
-      struct _RTL_ACTIVATION_CONTEXT_STACK_FRAME *ActiveFrame;
+      PRTL_ACTIVATION_CONTEXT_STACK_FRAME ActiveFrame;
       LIST_ENTRY FrameListCache;
-      ULONG Flags;
+      ULONG Flags; // ACTIVATION_CONTEXT_STACK_FLAG_*
       ULONG NextCookieSequenceNumber;
+      ULONG StackId;
     };
   };
-  ULONG StackId;
 } ACTIVATION_CONTEXT_STACK, *PACTIVATION_CONTEXT_STACK;
 
 typedef struct _GDI_TEB_BATCH
 {
   ULONG Offset;
-  HDC hdc;
-  ULONG buffer[310];
-} GDI_TEB_BATCH;
+  ULONG_PTR HDC;
+  ULONG Buffer[GDI_BATCH_BUFFER_SIZE];
+} GDI_TEB_BATCH, *PGDI_TEB_BATCH;
 
 // ==TEB==
 // https://www.geoffchappell.com/studies/windows/km/ntoskrnl/inc/api/pebteb/teb/index.htm
@@ -310,8 +302,10 @@ typedef struct _TEB
   CLIENT_ID ClientId;
   union
   {
-    // 0x28 0x50 (3.10 only)
+#ifndef _WIN64
+    // 0x28 0x50 (3.10 only) (next as structure at 0x01AC)
     PVOID UnknownPointerCsrQlpcTeb;
+#endif
     // 0x28 0x50 (3.50 and higher)
     PVOID ActiveRpcHandle;
   };
@@ -323,8 +317,10 @@ typedef struct _TEB
   ULONG LastErrorValue;
   union
   {
-    // 0x38 0x6C (3.10 only)
+#ifndef _WIN64
+    // 0x38 none (3.10 only)
     BYTE UnknowByte_0x38;
+#endif
     // 0x38 0x6C (3.50 and higher)
     ULONG CountOfOwnedCriticalSections;
   };
@@ -420,19 +416,22 @@ typedef struct _TEB
   {
 #ifndef _WIN64
     // 0x3C none (3.10 only)
-    UCHAR SpareBytes_3_10[0x88];
+    struct
+    {
+      UCHAR SpareBytes[0x88];
+    } nt_3_10_p1;
     // 0x3C none (3.50 to 3.51)
     struct
     {
-      // 0x3C none (3.50 to 3.51)
-      PVOID Win32ProcessInfo_3_50;
-      // 0x40 none (3.50 to 3.51)
-      PVOID Win32ThreadInfo_3_50;
-      // 0x44 none (3.50 to 3.51)
-      PVOID CsrQlpcStack_3_50;
-      // 0x48 none (3.50 to 3.51)
-      UCHAR SpareBytes_3_50[0x7C];
-    };
+      // 0x3C none (3.50 to 3.51) (previously at 0x01B0)
+      PVOID Win32ProcessInfo;
+      // 0x40 none (3.50 to 3.51) (previously at 0x01AC)
+      PVOID Win32ThreadInfo;
+      // 0x44 none (3.50 to 3.51) (previously at 0x06F0)
+      PVOID CsrQlpcStack;
+      // 0x48 none (3.50 to 3.51) (previously at 0x01C0)
+      UCHAR SpareBytes[0x7C];
+    } nt_3_50_p1;
 #endif
     // 0x3C 0x70 (4.0 and higher)
     struct
@@ -445,8 +444,11 @@ typedef struct _TEB
       union
       {
 #ifndef _WIN64
-        // 0x44 none (4.0 only)
-        ULONG Win32ClientInfo_4_0[0x1F];
+        struct
+        {
+          // 0x44 none (4.0 only)
+          ULONG Win32ClientInfo[0x1F];
+        } nt_4_0_p1;
 #endif
         // 0x44 0x80 (5.0 and higher)
         struct
@@ -515,14 +517,23 @@ typedef struct _TEB
   union
   {
     // 0xCC 0x0110 (3.10 to 6.3)
-    PVOID SystemReserved1_3_10[54];
+    struct
+    {
+      PVOID SystemReserved1[0x36];
+    } nt_3_10_p2;
     // 0xCC 0x0110 (10.0 and higher)
     struct
     {
       // 0xCC 0x0110 (10.0 and higher)
       PVOID ReservedForDebuggerInstrumentation[0x10];
       // 0x010C 0x0190 (1709 and higher)
-      PVOID SystemReserved1[0x1A];
+#ifdef _WIN64
+      PVOID SystemReserved1[25];
+      PVOID HeapFlsData;
+      ULONG_PTR RngState[4];
+#else
+      PVOID SystemReserved1[26];
+#endif
       // 0x0174 0x0280 (1709 and higher)
       CHAR PlaceholderCompatibilityMode;
       // 0x0175 0x0281 (1809 and higher)
@@ -537,6 +548,26 @@ typedef struct _TEB
       UCHAR WorkingOnBehalfOfTicket[8];
     };
   };
+
+  // ExceptionCode reference to
+  // https://github.com/win-polyfill/win-polyfill-pebteb/wiki/TEB::ExceptionCode
+  // 0x01A4 0x02C0 (all)
+  union
+  {
+#ifndef _WIN64
+    struct
+    {
+      // 0x01A4 none (3.10 to 4.0)
+      PVOID Spare1;
+    } nt_3_10_p3;
+#endif
+    // 0x01A4 0x02C0 (5.0 and higher)
+    LONG ExceptionCode;
+  };
+#ifdef _WIN64
+  // none 0x02C4 (6.3 and higher)
+  UCHAR Padding0[4];
+#endif
   // Before version 6.1, the preceding space is not reserved in any sense of
   // being kept for future use: the first 0xA0 bytes of it actually were in use,
   // by both the kernel and NTDLL, to support floating-point emulation. No
@@ -665,64 +696,61 @@ typedef struct _TEB
   // glDispatchTable apparently could not be expanded. No later version fills
   // the reduced glDispatchTable.
   //
-  // 0x01A4 0x02C0 (all)
+  // https://github.com/win-polyfill/win-polyfill-pebteb/wiki/TEB::UserReserved
+  // https://github.com/win-polyfill/win-polyfill-pebteb/wiki/TEB::glDispatchTable
+  // 0x01A8 0x02C0 (all)
   union
   {
 #ifndef _WIN64
-    // 0x01A4 none (3.10 only)
+    // 0x01A8 none (3.10 only)
     struct
     {
-      // 0x01A4 none (3.10 only)
-      PVOID Spare1;
-      // 0x01A8 none (3.10 only)
+      // 0x01A8 none (3.10 to 3.51)
       PVOID Spare2;
-      // 0x01AC none (3.10 only)
+      // 0x01AC none (3.10 only) (next at 0x40)
       PVOID Win32ThreadInfo;
-      // 0x01B0 none (3.10 only)
+      // 0x01B0 none (3.10 only) (next at 0x3C)
       PVOID Win32ProcessInfo;
       // 0x01B4 none (3.10 only)
       BYTE UnaccountedBytes_0x01B4[0x28];
-      // 0x01DC none (3.10 only)
+      // 0x01DC none (3.10 only) (next at 0x0F20)
       HANDLE DbgSsReserved[2];
       // 0x01E4 none (3.10 only)
       PVOID SystemReserved2[0x0143];
-      // 0x06F0 none (3.10 only)
+      // 0x06F0 none (3.10 only) (next at 0x44)
       PVOID CsrQlpcStack;
-      // 0x06F4 none (3.10 only)
+      // 0x06F4 none (3.10 to 4.0)
       ULONG GdiClientPID;
-      // 0x06F8 none (3.10 only)
+      // 0x06F8 none (3.10 to 4.0)
       ULONG GdiClientTID;
-      // 0x06FC none (3.10 only)
+      // 0x06FC none (3.10 to 4.0)
       PVOID GdiThreadLocalInfo;
-      // 0x0700 none (3.10 only)
+      // 0x0700 none (3.10 to 3.51)
       PVOID User32Reserved0;
-      // 0x0704 none (3.10 only)
+      // 0x0704 none (3.10 to 3.51)
       PVOID User32Reserved1;
-      // 0x0708 none (3.10 only);
+      // 0x0708 none (3.10 only)
       PVOID UserReserved[0x013B];
-    } nt_3_1;
+    } nt_3_10;
 #endif
-    // 0x01A4 0x02C0 (3.50 and higher)
+    // 0x01A8 0x02C0 (3.50 and higher)
     struct
     {
-      // 0x01A4 0x02C0 (3.50 and higher)
+      // 0x01A8 0x02C0 (3.50 and higher)
       union
       {
 #ifndef _WIN64
-        // 0x01A4 none (3.50 to 3.51)
+        // 0x01A8 none (3.50 to 3.51)
         struct
         {
-          // 0x01A4 none (3.50 to 3.51)
-          PVOID Spare1;
-          // 0x01A8 none (3.50 to 3.51)
+          // 0x01A8 none (3.10 to 3.51)
           PVOID Spare2;
-          // 0x01AC none (3.50 to 3.51)
+          // 0x01AC none (3.50 to 3.51) (previously as pointer at 0x28)
           PVOID CsrQlpcTeb[5];
-          // 0x01C0 none (3.50 to 3.51)
+          // 0x01C0 none (3.50 to 3.51) (next at 0x44)
           PVOID Win32ClientInfo[5];
           // 0x01D4 none (3.50 to 3.51)
-          PVOID SystemReserved2[322];
-
+          PVOID SystemReserved2[0x0142];
           // 0x06DC none (3.50 to 4.0)
           ULONG gdiRgn;
           // 0x06E0 none (3.50 to 4.0)
@@ -733,36 +761,32 @@ typedef struct _TEB
           CLIENT_ID RealClientId;
           // 0x06F0 none (3.50 to 4.0);
           PVOID GdiCachedProcessHandle;
-          // 0x06F4 none (3.50 to 4.0)
+          // 0x06F4 none (3.10 to 4.0)
           ULONG GdiClientPID;
-          // 0x06F8 none (3.50 to 4.0)
+          // 0x06F8 none (3.10 to 4.0)
           ULONG GdiClientTID;
-          // 0x06FC none (3.50 to 4.0)
+          // 0x06FC none (3.10 to 4.0)
           PVOID GdiThreadLocalInfo;
-
-          // 0x0700 none (3.50 to 3.51)
+          // 0x0700 none (3.10 to 3.51)
           PVOID User32Reserved0;
-          // 0x0704 none (3.50 to 3.51)
+          // 0x0704 none (3.10 to 3.51)
           PVOID User32Reserved1;
           // 0x0708 none (3.50 to 3.51)
           PVOID UserReserved[3];
           // 0x0714 none (3.50 to 3.51)
-          PVOID glDispatchTable[307];
-        } nt_3_50;
-        // 0x01A4 none (4.0 only)
+          PVOID glDispatchTable[0x0133];
+        } nt_3_50_p2;
+        // 0x01A8 none (4.0 only)
         struct
         {
-          // 0x01A4 none (4.0 only)
-          PVOID Spare1;
           // 0x01A8 none (4.0 only)
           NTSTATUS ExceptionCode;
           // 0x01AC none (4.0 only)
-          UCHAR SpareBytes1[40];
+          UCHAR SpareBytes1[0x28];
           // 0x01D4 none (4.0 only)
-          PVOID SystemReserved2[10];
+          PVOID SystemReserved2[0x0A];
           // 0x01FC none (4.0 only)
           GDI_TEB_BATCH GdiTebBatch;
-
           // 0x06DC none (3.50 to 4.0)
           ULONG gdiRgn;
           // 0x06E0 none (3.50 to 4.0)
@@ -771,34 +795,27 @@ typedef struct _TEB
           ULONG gdiBrush;
           // 0x06E8 none (3.50 to 4.0)
           CLIENT_ID RealClientId;
-          // 0x06F0 none (3.50 to 4.0);
+          // 0x06F0 none (3.50 to 4.0)
           PVOID GdiCachedProcessHandle;
-          // 0x06F4 none (3.50 to 4.0)
+          // 0x06F4 none (3.10 to 4.0)
           ULONG GdiClientPID;
-          // 0x06F8 none (3.50 to 4.0)
+          // 0x06F8 none (3.10 to 4.0)
           ULONG GdiClientTID;
-          // 0x06FC none (3.50 to 4.0)
+          // 0x06FC none (3.10 to 4.0)
           PVOID GdiThreadLocalInfo;
-
           // 0x0700 none (4.0 only)
           PVOID UserReserved[5];
           // 0x0714 none (4.0 only)
-          PVOID glDispatchTable[280];
+          PVOID glDispatchTable[0x0118];
           // 0x0B74 none (4.0 only)
-          ULONG glReserved1[26];
-          // 0x0BDC none (4.0 only)
+          ULONG glReserved1[0x1A];
+          // 0x0BDC none (4.0 and higher)
           PVOID glReserved2;
-        } nt_4_0;
+        } nt_4_0_p2;
 #endif
-        // 0x01A4 0x02C0 (5.0 and higher)
+        // 0x01A8 0x02C8 (5.0 and higher)
         struct
         {
-          // 0x01A4 0x02C0 (5.0 and higher)
-          NTSTATUS ExceptionCode;
-#ifdef _WIN64
-          // none 0x02C4 (6.3 and higher)
-          UCHAR Padding0[4];
-#endif
           // 0x01A8 0x02C8 (5.0 and higher)
           union
           {
@@ -807,8 +824,7 @@ typedef struct _TEB
             struct
             {
               // 0x01A8 (5.0 to early 5.2)
-              ACTIVATION_CONTEXT_STACK ActivationContextStack;
-              UCHAR SpareBytes1[48 - sizeof(PVOID) - sizeof(ACTIVATION_CONTEXT_STACK)];
+              UCHAR SpareBytes1[48 - sizeof(PVOID)];
             };
 #endif
             // 0x01A8 0x02C8 (late 5.2 and higher)
@@ -853,13 +869,13 @@ typedef struct _TEB
           ULONG GdiClientTID;
           // 0x06C8 0x07F8 (5.0 and higher)
           PVOID GdiThreadLocalInfo;
-          // 0x06CC 0x0800 (5.0 and higher)
+          // 0x06CC 0x0800 (5.0 and higher) (previously at 0x44)
           ULONG_PTR Win32ClientInfo[WIN32_CLIENT_INFO_LENGTH];
           // 0x07C4 0x09F0 (5.0 and higher)
-          PVOID glDispatchTable[233];
+          PVOID glDispatchTable[0xE9];
           // 0x0B68 0x1138 (5.0 and higher)
-          ULONG_PTR glReserved1[29];
-          // 0x0BDC 0x1220 (5.0 and higher)
+          ULONG_PTR glReserved1[0x1D];
+          // 0x0BDC 0x1220 (4.0 and higher)
           PVOID glReserved2;
         };
       };
@@ -894,7 +910,7 @@ typedef struct _TEB
   // 0x0C00 0x1268 (all)
   WCHAR StaticUnicodeBuffer[STATIC_UNICODE_BUFFER_LENGTH];
 #ifdef _WIN64
-  // none 0x1472 6.3 and higher
+  // none 0x1472 (6.3 and higher)
   UCHAR Padding3[6];
 #endif
   // 0x0E0C 0x1478 (all)
@@ -905,7 +921,7 @@ typedef struct _TEB
   LIST_ENTRY TlsLinks;
   // 0x0F18 0x1690 (all)
   PVOID Vdm;
-  // 0x0F1C 0x1698 (all)
+  // 0x0F1C 0x1698 (all) (last member in 3.10)
   PVOID ReservedForNtRpc;
   // The LastStatusValue is whatever was last given to the ancient
   // RtlNtStatusToDosError function. This is nowadays documented as a kernel
@@ -940,12 +956,8 @@ typedef struct _TEB
   //
   // Appended for Windows NT 3.50
   //
-  union
-  {
-    BYTE Tail_3_10[0];
-    // 0x0F20 0x16A0 (3.50 and higher)
-    PVOID DbgSsReserved[2];
-  };
+  // 0x0F20 0x16A0 (3.50 and higher)
+  PVOID DbgSsReserved[2];
   // That DbgSsReserved is an array of two handles may be vestigial from the
   // original implementation in which a thread that becomes a debugger connects
   // to a named port that’s created by the SMSS process. In version 5.1 and
@@ -974,7 +986,10 @@ typedef struct _TEB
   {
 #ifndef _WIN64
     // 0x0F2C 0x16B8 (4.0 to early 5.2)
-    PVOID Instrumentation_4_0[0x10];
+    struct
+    {
+      PVOID Instrumentation[0x10];
+    } nt_4_0_p3;
 #endif
     struct
     {
@@ -984,7 +999,7 @@ typedef struct _TEB
       PVOID SubProcessTag;
       // 0x0F68 0x1730 (late 5.2 and higher)
       PVOID EtwTraceData;
-    } nt_5_2_late;
+    } nt_5_2_sp1_p1;
     // 0x0F2C 0x16B8 (6.0 and higher)
     struct
     {
@@ -1241,7 +1256,7 @@ typedef struct _TEB
         {
           BOOLEAN SafeThunkCall;
           BOOLEAN BooleanSpare[3];
-        } nt_5_2_sp1;
+        } nt_5_2_sp1_p2;
         // 0x0FB8 0x17D0 (6.0 and higher)
         PVOID PreferredLanguages;
       };
