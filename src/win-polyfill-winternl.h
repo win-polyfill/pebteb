@@ -15,8 +15,8 @@ extern "C" {
 #endif
 
 //
-// These data structures and type definitions are needed for compilation and
-// use of the internal Windows APIs defined in this header.
+// These data structures and type definitions are needed for compilation and use
+// of the internal Windows APIs defined in win-polyfill-teb.h and win-polyfill-peb.h
 //
 
 typedef _Return_type_success_(return >= 0) LONG NTSTATUS;

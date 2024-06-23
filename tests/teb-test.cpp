@@ -6,41 +6,53 @@ void test_teb()
   printf("alignof(TEB):0x%x\n", (int)alignof(TEB));
   printf("sizeof(TEB):0x%x\n", (int)sizeof(TEB));
 
+  check_offsetof(offsetof(TEB, nt_3_10_p2.SystemReserved1), 0xCC, 0x0110);
+  check_offsetof(offsetof(TEB, ReservedForDebuggerInstrumentation), 0xCC, 0x0110);
+  check_offsetof(offsetof(TEB, SystemReserved1), 0x010C, 0x0190);
+  check_offsetof(offsetof(TEB, PlaceholderCompatibilityMode), 0x0174, 0x0280);
+  check_offsetof(offsetof(TEB, PlaceholderHydrationAlwaysExplicit), 0x0175, 0x0281);
+  check_offsetof(offsetof(TEB, PlaceholderReserved), 0x0176, 0x0282);
+  check_offsetof(offsetof(TEB, ProxiedProcessId), 0x0180, 0x028C);
+  check_offsetof(offsetof(TEB, ActivationStack), 0x0184, 0x0290);
+  check_offsetof(offsetof(TEB, WorkingOnBehalfOfTicket), 0x019C, 0x02B8);
+  check_offsetof(tail_offsetof(TEB, WorkingOnBehalfOfTicket), 0x01A4, 0x02C0);
 #ifndef _WIN64
-  check_offsetof(offsetof(TEB, nt_3_1.Spare1), 0x01A4, SIZE_MAX);
-  check_offsetof(offsetof(TEB, nt_3_50.Spare1), 0x01A4, SIZE_MAX);
-  check_offsetof(offsetof(TEB, nt_4_0.Spare1), 0x01A4, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_10_p3.Spare1), 0x01A4, SIZE_MAX);
+#endif
+  check_offsetof(offsetof(TEB, ExceptionCode), 0x01A4, 0x02C0);
+#ifdef _WIN64
+  check_offsetof(offsetof(TEB, Padding0), SIZE_MAX, 0x02C4);
+#endif
+#ifndef _WIN64
+  check_offsetof(offsetof(TEB, nt_3_10.Spare2), 0x01A8, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_10.Win32ThreadInfo), 0x01AC, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_10.GdiClientPID), 0x06F4, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_10.User32Reserved0), 0x0700, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_10.User32Reserved1), 0x0704, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_10.UserReserved), 0x0708, SIZE_MAX);
+  check_offsetof(tail_offsetof(TEB, nt_3_10.UserReserved), 0x0BF4, SIZE_MAX);
 
-  check_offsetof(offsetof(TEB, nt_3_1.Spare2), 0x01A8, SIZE_MAX);
-  check_offsetof(offsetof(TEB, nt_3_1.Win32ThreadInfo), 0x01AC, SIZE_MAX);
-  check_offsetof(offsetof(TEB, nt_3_1.GdiClientPID), 0x06F4, SIZE_MAX);
-  check_offsetof(offsetof(TEB, nt_3_1.UserReserved), 0x0708, SIZE_MAX);
-  check_offsetof(tail_offsetof(TEB, nt_3_1.UserReserved), 0x0BF4, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_50_p2.Spare2), 0x01A8, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_50_p2.CsrQlpcTeb), 0x01AC, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_50_p2.Win32ClientInfo), 0x01C0, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_50_p2.SystemReserved2), 0x01D4, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_50_p2.gdiRgn), 0x06DC, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_50_p2.User32Reserved0), 0x0700, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_50_p2.User32Reserved1), 0x0704, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_50_p2.UserReserved), 0x0708, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_3_50_p2.glDispatchTable), 0x0714, SIZE_MAX);
+  check_offsetof(tail_offsetof(TEB, nt_3_50_p2.glDispatchTable), 0x0BE0, SIZE_MAX);
 
-  check_offsetof(offsetof(TEB, nt_3_50.Spare2), 0x01A8, SIZE_MAX);
-  check_offsetof(offsetof(TEB, nt_4_0.ExceptionCode), 0x01A8, SIZE_MAX);
-
-  check_offsetof(offsetof(TEB, nt_3_50.CsrQlpcTeb), 0x01AC, SIZE_MAX);
-
-  check_offsetof(offsetof(TEB, nt_3_50.gdiRgn), 0x06DC, SIZE_MAX);
-
-  check_offsetof(offsetof(TEB, nt_3_50.glDispatchTable), 0x0714, SIZE_MAX);
-  check_offsetof(offsetof(TEB, nt_4_0.glReserved2), 0x0BDC, SIZE_MAX);
-
-  check_offsetof(tail_offsetof(TEB, nt_3_50.SystemReserved2), 0x06DC, SIZE_MAX);
-  check_offsetof(tail_offsetof(TEB, nt_4_0.GdiTebBatch), 0x06DC, SIZE_MAX);
-  check_offsetof(tail_offsetof(TEB, nt_3_50.glDispatchTable), 0x0BE0, SIZE_MAX);
-  check_offsetof(tail_offsetof(TEB, nt_4_0.glReserved2), 0x0BE0, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_4_0_p2.ExceptionCode), 0x01A8, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_4_0_p2.SpareBytes1), 0x01AC, SIZE_MAX);
+  check_offsetof(offsetof(TEB, nt_4_0_p2.glReserved2), 0x0BDC, SIZE_MAX);
+  check_offsetof(tail_offsetof(TEB, nt_4_0_p2.GdiTebBatch), 0x06DC, SIZE_MAX);
+  check_offsetof(tail_offsetof(TEB, nt_4_0_p2.glReserved2), 0x0BE0, SIZE_MAX);
 #endif
 
   {
-    check_offsetof(offsetof(TEB, ExceptionCode), 0x01A4, 0x02C0);
-#ifdef _WIN64
-    check_offsetof(offsetof(TEB, Padding0), SIZE_MAX, 0x02C4);
-#endif
-    check_offsetof(offsetof(TEB, ExceptionCode), 0x01A4, 0x02C0);
 #ifndef _WIN64
-    check_offsetof(offsetof(TEB, ActivationContextStack), 0x01A8, SIZE_MAX);
+    check_offsetof(offsetof(TEB, SpareBytes1), 0x01A8, SIZE_MAX);
 #endif
     check_offsetof(offsetof(TEB, ActivationContextStackPointer), 0x01A8, 0x02C8);
     check_offsetof(offsetof(TEB, InstrumentationCallbackSp), 0x01AC, 0x02D0);
@@ -56,7 +68,8 @@ void test_teb()
   }
 
   check_offsetof(offsetof(TEB, ReservedForNtRpc), 0x0F1C, 0x1698);
-  check_offsetof(offsetof(TEB, Tail_3_10), 0x0F20, SIZE_MAX);
+  // (last member in 3.10)
+  check_offsetof(tail_offsetof(TEB, ReservedForNtRpc), 0x0F20, SIZE_MAX);
 
   check_offsetof(offsetof(TEB, GdiTebBatch), 0x01D4, 0x02F0);
   check_offsetof(offsetof(TEB, RealClientId), 0x06B4, 0x07D8);
@@ -88,7 +101,7 @@ void test_teb()
 #ifndef _WIN64
   check_offsetof(offsetof(TEB, nt_5_1_sp2.SafeThunkCall), 0x0FB4, SIZE_MAX);
 #endif
-  check_offsetof(offsetof(TEB, nt_5_2_sp1.SafeThunkCall), 0x0FB8, 0x17D0);
+  check_offsetof(offsetof(TEB, nt_5_2_sp1_p2.SafeThunkCall), 0x0FB8, 0x17D0);
 
   check_offsetof(offsetof(TEB, PreferredLanguages), 0x0FB8, 0x17D0);
   check_offsetof(offsetof(TEB, UserPrefLanguages), 0x0FBC, 0x17D8);
