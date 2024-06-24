@@ -8,6 +8,7 @@ cpk_add_test(
     teb-test.cpp
     test-include.c
     test-main.cpp
+    win-polyfill.cpp
   WORKING_DIRECTORY
     ${CMAKE_CURRENT_LIST_DIR}
 )

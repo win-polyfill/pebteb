@@ -106,6 +106,25 @@ void test_teb()
   check_offsetof(offsetof(TEB, PreferredLanguages), 0x0FB8, 0x17D0);
   check_offsetof(offsetof(TEB, UserPrefLanguages), 0x0FBC, 0x17D8);
   check_offsetof(offsetof(TEB, LockCount), 0x0FD8, 0x1808);
+
+  check_offsetof(offsetof(TEB, ProcessRundown), 0x0FDC, 0x180C);
+  check_offsetof(offsetof(TEB, SpareUlong0), 0x0FDC, 0x180C);
+  check_offsetof(offsetof(TEB, WowTebOffset), 0x0FDC, 0x180C);
+  check_offsetof(offsetof(TEB, LastSwitchTime), 0x0FE0, 0x1810);
+  check_offsetof(offsetof(TEB, TotalSwitchOutTime), 0x0FE8, 0x1818);
+  check_offsetof(offsetof(TEB, WaitReasonBitMap), 0x0FF0, 0x1820);
+  check_offsetof(tail_offsetof(TEB, WaitReasonBitMap), 0x0FF8, 0x1828);
+  check_offsetof(offsetof(TEB, PaddingVista), 0x0FF8, 0x1828);
+  check_offsetof(tail_offsetof(TEB, PaddingVista), 0x0FFC, 0x1830);
+
+  check_offsetof(offsetof(TEB, ResourceRetValue), 0x0FE0, 0x1810);
+  check_offsetof(offsetof(TEB, ReservedForCrt), 0x0FE8, 0x1820);
+  check_offsetof(tail_offsetof(TEB, EffectiveContainerId), 0x1000, 0x1838);
   check_offsetof(offsetof(TEB, LastSleepCounter), 0x1000, 0x1838);
-  check_sizeof(sizeof(TEB), 0x1038, 0x1878);
+
+  check_sizeof(sizeof(TEB), 0x1038, 0x1878, alignof(TEB));
+
+  // Used for Windows Vista and lower
+  check_offsetof(offsetof(TEB, PaddingVista), 0x0FF8, 0x1828);
+  check_offsetof(offsetof(TEB, ReservedForCrt), 0x0FE8, 0x1820);
 }
