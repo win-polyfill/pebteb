@@ -648,24 +648,33 @@ typedef struct _PEB
 
   union
   {
-    // 0x1C 0x38 (3.10 to 5.0)
-    PVOID FastPebLock_3_10;
+#ifndef _WIN64
+    // 0x1C none (3.10 to 5.0)
+    struct
+    {
+      PVOID FastPebLock;
+    } nt_3_10_p1;
+#endif
     // 0x1C 0x38 (5.1 and higher)
-    RTL_CRITICAL_SECTION *FastPebLock;
+    PRTL_CRITICAL_SECTION FastPebLock;
   };
   union
   {
-    // 0x20 0x40 (3.10 to 5.1)
+#ifndef _WIN64
+    // 0x20 none (3.10 to 5.1)
     PVOID FastPebLockRoutine;
-    // 0x20 0x40 (early 5.2 only)
+    // 0x20 none (early 5.2 only)
     PVOID SparePtr1;
+#endif
     // 0x20 0x40 (late 5.2 and higher)
     PVOID AtlThunkSListPtr;
   };
   union
   {
+#ifndef _WIN64
     // 0x24 0x48 (3.10 to 5.1)
     PVOID FastPebUnlockRoutine;
+#endif
     // 0x24 0x48 (5.2 only)
     PVOID SparePtr2;
     // 0x24 0x48 (6.0 and higher)
@@ -717,85 +726,100 @@ typedef struct _PEB
   // Can it really be that Microsoft was never called out for this
   // grotesqueness?
 
+  //  0x28 0x50 (all)
   union
   {
-    // 0x28 none (3.10)
-    ULONG Sparse_0x28;
-    // 0x28 0x50 (3.50 to 5.2)
-    ULONG EnvironmentUpdateCount;
-    union // https://www.geoffchappell.com/studies/windows/km/ntoskrnl/inc/api/pebteb/peb/crossprocessflags.htm
+#ifndef _WIN64
+    // 0x28 none (3.10 only) unaccounted 0x10 bytes
+    struct
     {
-      // 0x28 0x50 (6.0 and higher)
-      ULONG CrossProcessFlags;
-      struct
+      BYTE Unaccounted[0x10];
+    } nt_3_10_p2;
+#endif
+    // 0x28 0x50 (3.50 and higher)
+    struct
+    {
+      // 0x28 0x50 (3.50 and higher)
+      union
       {
-        // 0x00000001 (6.0 and higher)
-        ULONG ProcessInJob : 1;
-        // 0x00000002 (6.0 and higher)
-        ULONG ProcessInitializing : 1;
-        // 0x00000004 (6.1 and higher)
-        ULONG ProcessUsingVEH : 1;
-        // 0x00000008 (6.1 and higher)
-        ULONG ProcessUsingVCH : 1;
-        // 0x00000010 (6.1 and higher)
-        ULONG ProcessUsingFTH : 1;
-        // 0x00000020 (1703 and higher)
-        ULONG ProcessPreviouslyThrottled : 1;
-        // 0x00000040 (1703 and higher)
-        ULONG ProcessCurrentlyThrottled : 1;
-        // 0x00000080 (1809 and higher)
-        ULONG ProcessImagesHotPatched : 1;
-        ULONG ReservedBits0 : 24;
+        // 0x28 none (3.50 to 5.2)
+        ULONG EnvironmentUpdateCount;
+        // 0x28 0x50 (6.0 and higher)
+        ULONG CrossProcessFlags;
+        struct // https://www.geoffchappell.com/studies/windows/km/ntoskrnl/inc/api/pebteb/peb/crossprocessflags.htm
+        {
+          // 0x00000001 (6.0 and higher)
+          ULONG ProcessInJob : 1;
+          // 0x00000002 (6.0 and higher)
+          ULONG ProcessInitializing : 1;
+          // 0x00000004 (6.1 and higher)
+          ULONG ProcessUsingVEH : 1;
+          // 0x00000008 (6.1 and higher)
+          ULONG ProcessUsingVCH : 1;
+          // 0x00000010 (6.1 and higher)
+          ULONG ProcessUsingFTH : 1;
+          // 0x00000020 (1703 and higher)
+          ULONG ProcessPreviouslyThrottled : 1;
+          // 0x00000040 (1703 and higher)
+          ULONG ProcessCurrentlyThrottled : 1;
+          // 0x00000080 (1809 and higher)
+          ULONG ProcessImagesHotPatched : 1;
+          ULONG ReservedBits0 : 24;
+        };
+      };
+#ifdef _WIN64
+      // none 0x54 (6.3 and higher)
+      UCHAR Padding1[4];
+#endif
+      // 0x2C 0x58 (3.50 and higher)
+      union
+      {
+#ifndef _WIN64
+        // 0x2C none (3.50 only) unaccounted four bytes
+        struct
+        {
+          BYTE Unaccounted[4];
+        } nt_3_50_p1;
+#endif
+        // 0x2C 0x58 (3.51 and higher)
+        PVOID KernelCallbackTable;
+        // 0x2C 0x58 (6.0 and higher)
+        PVOID UserSharedInfoPtr;
+      };
+      // 0x30 0x60 (3.50 and higher)
+      union
+      {
+#ifndef _WIN64
+        // 0x30 none (3.50 to 4.0)
+        HANDLE EventLogSection;
+#endif
+        // 0x30 0x60 (5.0 and higher)
+        ULONG SystemReserved0;
+      };
+      // 0x34 0x64 (3.50 and higher)
+      union
+      {
+#ifndef _WIN64
+        // 0x34 none (3.50 to 4.0)
+        PVOID EventLog;
+        // 0x34 none (5.0 only)
+        ULONG SystemReserved1;
+        // 0x34 none (early 5.1; early 5.2)
+        struct
+        {
+          // 0x00000003
+          ULONG ExecuteOptions : 2;
+          ULONG SpareBits_0x34 : 30;
+        };
+#endif
+        // 0x34 0x64 (late 5.2 to 6.0)
+        ULONG SpareUlong;
+        // 0x34 0x64 (late 5.1; 6.1 and higher)
+        ULONG AtlThunkSListPtr32;
       };
     };
   };
-#ifdef _WIN64
-  // none 0x54 (6.3 and higher)
-  UCHAR Padding1[4];
-#endif
 
-  union
-  {
-    // 0x2C none (3.10 to 3.50)
-    ULONG Sparse_0x2c;
-    // 0x2C 0x58 (3.51 and higher)
-    PVOID KernelCallbackTable;
-    // 0x2C 0x58 (6.0 and higher)
-    PVOID UserSharedInfoPtr;
-  };
-  union
-  {
-    // 0x30 none (3.10)
-    ULONG Sparse_0x30;
-#ifndef _WIN64
-    // 0x30 none (3.50 to 4.0)
-    HANDLE EventLogSection;
-#endif
-    // 0x30 0x60 (5.0 and higher)
-    ULONG SystemReserved0;
-  };
-  union
-  {
-    // 0x34 none (3.10)
-    ULONG Sparse_0x34;
-#ifndef _WIN64
-    // 0x34 none (3.50 to 4.0)
-    PVOID EventLog;
-    // 0x34 none (5.0 only)
-    ULONG SystemReserved1;
-    // 0x34 none (early 5.1; early 5.2)
-    struct
-    {
-      // 0x00000003
-      ULONG ExecuteOptions : 2;
-      ULONG SpareBits_0x34 : 30;
-    };
-#endif
-    // 0x34 0x64 (late 5.2 to 6.0)
-    ULONG SpareUlong;
-    // 0x34 0x64 (late 5.1; 6.1 and higher)
-    ULONG AtlThunkSListPtr32;
-  };
   // No use is known of the preceding 0x10 bytes in version 3.10. It seems
   // more than merely plausible that the explicit reservation of two dwords as
   // SystemReserved, as known from symbol files for late service packs of
@@ -889,17 +913,13 @@ typedef struct _PEB
   union
   {
 #ifndef _WIN64
-    // 0x60 none (3.10 only)
+    // 0x60 none (3.10 to 3.50)
     struct
     {
-      // 0x60 none (all)
+      // 0x60 none (3.10 to 3.50)
       PVOID UnicodeCaseTableData;
-      // 0x64 none (3.10 only)
-      ULONG Spare;
-      // 0x68 none (3.10 only);
+      // 0x68 none (3.10 to 3.50);
       LARGE_INTEGER CriticalSectionTimeout;
-      // 0x70 none (3.10 only)
-      BYTE Tail[0];
     } nt_3_10;
 #endif
     // 0x60 0xB0 (3.51 and higher)
@@ -943,36 +963,31 @@ typedef struct _PEB
   ULONG_PTR HeapDeCommitFreeBlockThreshold;
   ULONG NumberOfHeaps;
   ULONG MaximumNumberOfHeaps;
+  // 0x90 0xF0 (3.51 and higher)
   PVOID *ProcessHeaps;
 
   //
   //
   // Appended for Windows NT 4.0
   //
-  union
-  {
-#ifndef _WIN64
-    struct
-    {
-      // 0x94 none (3.51)
-      ULONG Spare;
-      // 0x94 none (3.51 only)
-      BYTE Tail[0];
-    } nt_3_51;
-#endif
-    // 0x94 0xF8 (4.0 and higher)
-    PVOID GdiSharedHandleTable;
-  };
+  // 0x94 0xF8 (4.0 and higher)
+  PVOID GdiSharedHandleTable;
   // 0x98 0x0100 (4.0 and higher)
   PVOID ProcessStarterHelper;
   ULONG GdiDCAttributeList;
 #ifdef _WIN64
   UCHAR Padding3[4];
 #endif
+  // 0xA0 0x0110 (4.0 and higher)
   union
   {
+#ifndef _WIN64
     // 0xA0 0x0110 (4.0 to 5.1)
-    PVOID LoaderLock_4_0;
+    struct
+    {
+      PVOID LoaderLock;
+    } nt_4_0_p1;
+#endif
     RTL_CRITICAL_SECTION *LoaderLock;
   };
   ULONG OSMajorVersion;
@@ -1021,20 +1036,8 @@ typedef struct _PEB
   //
   // Appended for Windows 2000
   //
-  union
-  {
-#ifndef _WIN64
-    struct
-    {
-      // 0x014C none (4.0 only)
-      ULONG Spare;
-      // 0x0150 none (4.0 only)
-      BYTE Tail[0];
-    } nt_4_0;
-#endif
-    // 0x014C 0x0230 (5.0 and higher)
-    VOID (*PostProcessInitRoutine)(VOID);
-  };
+  // 0x014C 0x0230 (5.0 and higher)
+  VOID (*PostProcessInitRoutine)(VOID);
   // 0x0150 0x0238 (5.0 and higher)
   PVOID TlsExpansionBitmap;
   ULONG TlsExpansionBitmapBits[0x20];
@@ -1059,10 +1062,6 @@ typedef struct _PEB
       PVOID AppCompatInfo;
       // 0x01DC none (5.0 only)
       UNICODE_STRING CSDVersion;
-      // 0x01E4 none (5.0 only)
-      ULONG Spare;
-      // 0x01E8 none (5.0 only)
-      BYTE Tail[0];
     } nt_5_0;
 #endif
     struct
@@ -1101,17 +1100,9 @@ typedef struct _PEB
   //
   // Appended for Windows Server 2003
   //
+  // 0x020C 0x0320 (5.2 and higher)
   union
   {
-#ifndef _WIN64
-    struct
-    {
-      // 0x020C none (5.1 only)
-      ULONG Spare;
-      // 0x0210 none (5.1 only)
-      BYTE Tail[0];
-    } nt_5_1;
-#endif
     struct
     {
       // 0x020C 0x0320 (5.2 to 1809)
@@ -1138,13 +1129,8 @@ typedef struct _PEB
   //
   // Appended for Windows Vista
   //
-  union
-  {
-    // 0x0230 0x0358 (5.2 only)
-    BYTE Tail_5_2[0];
-    // 0x0230 0x0358 (6.0 and higher)
-    PVOID WerRegistrationData;
-  };
+  // 0x0230 0x0358 (6.0 and higher)
+  PVOID WerRegistrationData;
   // 0x0234 0x0360 (6.0 and higher)
   PVOID WerShipAssertPtr;
 
@@ -1154,8 +1140,6 @@ typedef struct _PEB
   //
   union
   {
-    // 0x0238 0x0368 (6.0 only)
-    BYTE Tail_6_0[0];
     // 0x0238 0x0368 (6.1 only)
     PVOID pContextData;
     // 0x0238 0x0368 (6.2 and higher)
@@ -1183,25 +1167,15 @@ typedef struct _PEB
   //
   // Appended for Windows 8
   //
-  union
-  {
-    // 0x0248 0x0380 (6.1 only)
-    BYTE Tail_6_1[0];
-    // 0x0248 0x0380 (6.2 and higher)
-    ULONGLONG CsrServerReadOnlySharedMemoryBase;
-  };
+  // 0x0248 0x0380 (6.2 and higher)
+  ULONGLONG CsrServerReadOnlySharedMemoryBase;
 
   //
   //
   // Appended Later in Windows 10
   //
-  union
-  {
-    // 0x0250 0x0388 (6.2 to 10.0 before 1511)
-    BYTE Tail_6_2[0];
-    // 0x0250 0x0388 (1511 and higher)
-    ULONG TppWorkerpListLock;
-  };
+  // 0x0250 0x0388 (1511 and higher)
+  ULONG TppWorkerpListLock;
   // 0x0254 0x0390 (1511 and higher)
   LIST_ENTRY TppWorkerpList;
   // 0x025C 0x03A0 (1511 and higher)
@@ -1265,6 +1239,12 @@ typedef struct _PEB
   // help, disguises that Microsoft is systematically skipping the work of
   // documenting these features.
 
+  //
+  //
+  // Appended Later in Windows 11
+  //
+  // 0x0480 0x07C8 (NTDDI_WIN11_ZN and higher)
+  ULONGLONG ExtendedFeatureDisableMask;
 } PEB, PPEB;
 
 #ifdef __cplusplus

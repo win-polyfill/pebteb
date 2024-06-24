@@ -86,7 +86,7 @@ void test_PEB_LDR_DATA()
   check_offsetof(offsetof(PEB_LDR_DATA, EntryInProgress), 0x24, 0x40);
   check_offsetof(offsetof(PEB_LDR_DATA, ShutdownInProgress), 0x28, 0x48);
   check_offsetof(offsetof(PEB_LDR_DATA, ShutdownThreadId), 0x2C, 0x50);
-  check_sizeof(sizeof(PEB_LDR_DATA), 0x30, 0x58);
+  check_sizeof(sizeof(PEB_LDR_DATA), 0x30, 0x58, alignof(PEB_LDR_DATA));
 }
 
 void test_RTL_USER_PROCESS_PARAMETERS()
@@ -141,7 +141,11 @@ void test_RTL_USER_PROCESS_PARAMETERS()
     offsetof(RTL_USER_PROCESS_PARAMETERS, DefaultThreadpoolThreadMaximum),
     0x02BC,
     0x043C);
-  check_sizeof(sizeof(RTL_USER_PROCESS_PARAMETERS), 0x02C0, 0x0440);
+  check_sizeof(
+    sizeof(RTL_USER_PROCESS_PARAMETERS),
+    0x02C0,
+    0x0440,
+    alignof(RTL_USER_PROCESS_PARAMETERS));
 }
 
 void check_peb_CrossProcessFlags()
@@ -195,7 +199,8 @@ void test_peb()
   printf("sizeof(PEB):0x%x\n", (int)sizeof(PEB));
 
   {
-    PEB peb{.InheritedAddressSpace = 1};
+    PEB peb{};
+    peb.InheritedAddressSpace = 1;
     check_uchar_mask(&peb, 0x00, 0x01);
   }
   check_offsetof(offsetof(PEB, InheritedAddressSpace), 0x00, 0x00);
@@ -216,16 +221,24 @@ void test_peb()
   check_offsetof(offsetof(PEB, SubSystemData), 0x14, 0x28);
   check_offsetof(offsetof(PEB, ProcessHeap), 0x18, 0x30);
 
-  check_offsetof(offsetof(PEB, FastPebLock_3_10), 0x1C, 0x38);
+#ifndef _WIN64
+  check_offsetof(offsetof(PEB, nt_3_10_p1.FastPebLock), 0x1C, SIZE_MAX);
+#endif
   check_offsetof(offsetof(PEB, FastPebLock), 0x1C, 0x38);
-  check_offsetof(offsetof(PEB, FastPebLockRoutine), 0x20, 0x40);
-  check_offsetof(offsetof(PEB, SparePtr1), 0x20, 0x40);
+#ifndef _WIN64
+  check_offsetof(offsetof(PEB, FastPebLockRoutine), 0x20, SIZE_MAX);
+  check_offsetof(offsetof(PEB, SparePtr1), 0x20, SIZE_MAX);
+#endif
   check_offsetof(offsetof(PEB, AtlThunkSListPtr), 0x20, 0x40);
+#ifndef _WIN64
   check_offsetof(offsetof(PEB, FastPebUnlockRoutine), 0x24, 0x48);
+#endif
   check_offsetof(offsetof(PEB, SparePtr2), 0x24, 0x48);
   check_offsetof(offsetof(PEB, IFEOKey), 0x24, 0x48);
 
-  check_offsetof(offsetof(PEB, Sparse_0x28), 0x28, SIZE_MAX);
+#ifndef _WIN64
+  check_offsetof(offsetof(PEB, nt_3_10_p2.Unaccounted), 0x28, SIZE_MAX);
+#endif
   check_offsetof(offsetof(PEB, EnvironmentUpdateCount), 0x28, 0x50);
   check_peb_CrossProcessFlags();
   check_offsetof(offsetof(PEB, CrossProcessFlags), 0x28, 0x50);
@@ -233,15 +246,15 @@ void test_peb()
   check_offsetof(offsetof(PEB, Padding1), SIZE_MAX, 0x54);
 #endif
 
-  check_offsetof(offsetof(PEB, Sparse_0x2c), 0x2c, SIZE_MAX);
+#ifndef _WIN64
+  check_offsetof(offsetof(PEB, nt_3_50_p1.Unaccounted), 0x2c, SIZE_MAX);
+#endif
   check_offsetof(offsetof(PEB, KernelCallbackTable), 0x2c, 0x58);
   check_offsetof(offsetof(PEB, UserSharedInfoPtr), 0x2c, 0x58);
-  check_offsetof(offsetof(PEB, Sparse_0x30), 0x30, SIZE_MAX);
 #ifndef _WIN64
   check_offsetof(offsetof(PEB, EventLogSection), 0x30, SIZE_MAX);
 #endif
   check_offsetof(offsetof(PEB, SystemReserved0), 0x30, 0x60);
-  check_offsetof(offsetof(PEB, Sparse_0x34), 0x34, SIZE_MAX);
 #ifndef _WIN64
   check_offsetof(offsetof(PEB, EventLog), 0x34, SIZE_MAX);
   check_offsetof(offsetof(PEB, SystemReserved1), 0x34, SIZE_MAX);
@@ -274,16 +287,17 @@ void test_peb()
   check_offsetof(offsetof(PEB, OemCodePageData), 0x5C, 0xA8);
 #ifndef _WIN64
   check_offsetof(offsetof(PEB, nt_3_10.UnicodeCaseTableData), 0x60, 0xB0);
-  check_offsetof(offsetof(PEB, nt_3_10.Spare), 0x64, SIZE_MAX);
   check_offsetof(offsetof(PEB, nt_3_10.CriticalSectionTimeout), 0x68, SIZE_MAX);
-  check_offsetof(offsetof(PEB, nt_3_10.Tail), 0x70, SIZE_MAX);
+  // Check size for Windows NT 3.10 and 3.50
+  check_sizeof(
+    tail_offsetof(PEB, nt_3_10.CriticalSectionTimeout), 0x70, SIZE_MAX, alignof(PEB));
 #endif
+
+  // Appended for Windows NT 3.51
   check_offsetof(offsetof(PEB, UnicodeCaseTableData), 0x60, 0xB0);
   check_offsetof(offsetof(PEB, NumberOfProcessors), 0x64, 0xB8);
   check_offsetof(offsetof(PEB, NtGlobalFlag), 0x68, 0xBC);
   check_offsetof(offsetof(PEB, CriticalSectionTimeout), 0x70, 0xC0);
-
-  // Appended for Windows NT 3.51
   check_offsetof(offsetof(PEB, HeapSegmentReserve), 0x78, 0xC8);
   check_offsetof(offsetof(PEB, HeapSegmentCommit), 0x7C, 0xD0);
   check_offsetof(offsetof(PEB, HeapDeCommitTotalFreeThreshold), 0x80, 0xD8);
@@ -291,10 +305,8 @@ void test_peb()
   check_offsetof(offsetof(PEB, NumberOfHeaps), 0x88, 0xE8);
   check_offsetof(offsetof(PEB, MaximumNumberOfHeaps), 0x8C, 0xEC);
   check_offsetof(offsetof(PEB, ProcessHeaps), 0x90, 0xF0);
-#ifndef _WIN64
-  check_offsetof(offsetof(PEB, nt_3_51.Spare), 0x94, SIZE_MAX);
-  check_offsetof(offsetof(PEB, nt_3_51.Tail), 0x98, SIZE_MAX);
-#endif
+  // Check size for Windows NT 3.51
+  check_sizeof(tail_offsetof(PEB, ProcessHeaps), 0x98, SIZE_MAX, alignof(PEB));
 
   // Appended for Windows NT 4.0
   check_offsetof(offsetof(PEB, GdiSharedHandleTable), 0x94, 0xF8);
@@ -303,7 +315,9 @@ void test_peb()
 #ifdef _WIN64
   check_offsetof(offsetof(PEB, Padding3), SIZE_MAX, 0x010C);
 #endif
-  check_offsetof(offsetof(PEB, LoaderLock_4_0), 0xA0, 0x0110);
+#ifndef _WIN64
+  check_offsetof(offsetof(PEB, nt_4_0_p1.LoaderLock), 0xA0, 0x0110);
+#endif
   check_offsetof(offsetof(PEB, LoaderLock), 0xA0, 0x0110);
   check_offsetof(offsetof(PEB, OSMajorVersion), 0xA4, 0x0118);
   check_offsetof(offsetof(PEB, OSMinorVersion), 0xA8, 0x011C);
@@ -319,10 +333,8 @@ void test_peb()
   check_offsetof(offsetof(PEB, ImageProcessAffinityMask), 0xC0, 0x0138);
   check_offsetof(offsetof(PEB, ActiveProcessAffinityMask), 0xC0, 0x0138);
   check_offsetof(offsetof(PEB, GdiHandleBuffer), 0xC4, 0x0140);
-#ifndef _WIN64
-  check_offsetof(offsetof(PEB, nt_4_0.Spare), 0x014C, SIZE_MAX);
-  check_offsetof(offsetof(PEB, nt_4_0.Tail), 0x0150, SIZE_MAX);
-#endif
+  // Check size for Windows NT 4.0
+  check_sizeof(tail_offsetof(PEB, GdiHandleBuffer) + 4, 0x0150, SIZE_MAX, alignof(PEB));
 
   // Appended for Windows 2000
   check_offsetof(offsetof(PEB, PostProcessInitRoutine), 0x014C, 0x0230);
@@ -335,8 +347,8 @@ void test_peb()
 #ifndef _WIN64
   check_offsetof(offsetof(PEB, nt_5_0.AppCompatInfo), 0x01D8, SIZE_MAX);
   check_offsetof(offsetof(PEB, nt_5_0.CSDVersion), 0x01DC, SIZE_MAX);
-  check_offsetof(offsetof(PEB, nt_5_0.Spare), 0x01E4, SIZE_MAX);
-  check_offsetof(offsetof(PEB, nt_5_0.Tail), 0x01E8, SIZE_MAX);
+  // Check size for Windows NT 5.0
+  check_sizeof(tail_offsetof(PEB, nt_5_0.CSDVersion) + 4, 0x01E8, SIZE_MAX, alignof(PEB));
 #endif
 
   // Appended for Windows XP
@@ -353,8 +365,9 @@ void test_peb()
 #ifndef _WIN64
   // Note: Windows XP 32bit is 5.1 and Windows XP 64 bit is 5.2
   // Their kernel is different
-  check_offsetof(offsetof(PEB, nt_5_1.Spare), 0x020C, SIZE_MAX);
-  check_offsetof(offsetof(PEB, nt_5_1.Tail), 0x0210, SIZE_MAX);
+  // Check size for Windows NT 5.1
+  check_sizeof(
+    tail_offsetof(PEB, MinimumStackCommit) + 4, 0x0210, SIZE_MAX, alignof(PEB));
 #endif
 
   // Appended for Windows Server 2003
@@ -365,18 +378,20 @@ void test_peb()
   check_offsetof(offsetof(PEB, FlsHighIndex), 0x022C, 0x0350);
   check_offsetof(offsetof(PEB, SparePointers), 0x020C, 0x0320);
   check_offsetof(offsetof(PEB, SpareUlongs), 0x021C, 0x0340);
-  check_offsetof(offsetof(PEB, Tail_5_2), 0x0230, 0x0358);
+  // Check size for Windows NT 5.2
+  check_sizeof(tail_offsetof(PEB, FlsHighIndex), 0x0230, 0x0358, alignof(PEB));
+  check_sizeof(tail_offsetof(PEB, SpareUlongs), 0x0230, 0x0358, alignof(PEB));
 
   // Appended for Windows Vista
   check_offsetof(offsetof(PEB, WerRegistrationData), 0x0230, 0x0358);
   check_offsetof(offsetof(PEB, WerShipAssertPtr), 0x0234, 0x0360);
-  check_offsetof(offsetof(PEB, Tail_6_0), 0x0238, 0x0368);
+  // Check size for Windows NT 6.0
+  check_sizeof(tail_offsetof(PEB, WerShipAssertPtr), 0x0238, 0x0368, alignof(PEB));
 
   // Appended for Windows 7
   check_offsetof(offsetof(PEB, pContextData), 0x0238, 0x0368);
   check_offsetof(offsetof(PEB, pUnused), 0x0238, 0x0368);
   check_offsetof(offsetof(PEB, pImageHeaderHash), 0x023C, 0x0370);
-  check_offsetof(offsetof(PEB, TracingFlags), 0x0240, 0x0378);
   {
     PEB peb{};
     peb.HeapTracingEnabled = 1;
@@ -392,11 +407,15 @@ void test_peb()
     peb.LibLoaderTracingEnabled = 1;
     check_ulong_mask_both(&peb, 0x0240, 0x0378, 0x00000004);
   }
-  check_offsetof(offsetof(PEB, Tail_6_1), 0x0248, 0x0380);
+  check_offsetof(offsetof(PEB, TracingFlags), 0x0240, 0x0378);
+  // Check size for Windows NT 6.1
+  check_sizeof(tail_offsetof(PEB, TracingFlags) + 4, 0x0248, 0x0380, alignof(PEB));
 
   // Appended for Windows 8
   check_offsetof(offsetof(PEB, CsrServerReadOnlySharedMemoryBase), 0x0248, 0x0380);
-  check_offsetof(offsetof(PEB, Tail_6_2), 0x0250, 0x0388);
+  // Check size for Windows NT 6.2
+  check_sizeof(
+    tail_offsetof(PEB, CsrServerReadOnlySharedMemoryBase), 0x0250, 0x0388, alignof(PEB));
 
   // Appended Later in Windows 10
   check_offsetof(offsetof(PEB, TppWorkerpListLock), 0x0250, 0x0388);
@@ -415,6 +434,10 @@ void test_peb()
     check_ulong_mask_both(&peb, 0x0474, 0x07C0, 0x00000001);
   }
   check_offsetof(offsetof(PEB, NtGlobalFlag2), 0x0478, 0x07C4);
+  // Check size for Windows NT 10.0 22H2
+  check_sizeof(tail_offsetof(PEB, NtGlobalFlag2), 0x0480, 0x07C8, alignof(PEB));
 
-  check_sizeof(sizeof(PEB), 0x0480, 0x07C8);
+  check_offsetof(offsetof(PEB, ExtendedFeatureDisableMask), 0x0480, 0x07C8);
+
+  check_sizeof(sizeof(PEB), 0x488, 0X7D0, alignof(PEB));
 }

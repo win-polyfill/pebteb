@@ -44,10 +44,15 @@ jobs:
           Import-Module $dllPath;
 
           Enter-VsDevShell -VsInstallPath $vsPath -SkipAutomaticLocation -DevCmdArguments '-host_arch=x64 -arch=${{ matrix.arch }}'
-          Write-Host("The env of vs shell: $env");
+
+          $envvars = gci env:
+          $Max = ($envvars.name| Measure-Object -Property length -Maximum).Maximum + 3
+          $envvars | % {Write-Host $_.name.padright($Max,' ')  -ForegroundColor Cyan -NoNewline;Write-Host $_.value}
+
           mkdir build
           pushd build
           cmake -DBUILD_TESTING:BOOL=TRUE $env:GITHUB_WORKSPACE -G "Ninja Multi-Config"
+
           cmake --build . --config Debug
           ctest -C Debug
 

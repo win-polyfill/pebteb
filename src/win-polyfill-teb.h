@@ -319,7 +319,7 @@ typedef struct _TEB
   {
 #ifndef _WIN64
     // 0x38 none (3.10 only)
-    BYTE UnknowByte_0x38;
+    BYTE UnknowByte;
 #endif
     // 0x38 0x6C (3.50 and higher)
     ULONG CountOfOwnedCriticalSections;
@@ -1326,11 +1326,12 @@ typedef struct _TEB
     {
       // 0x0FE0 0x1810 (6.0 only)
       ULONGLONG LastSwitchTime;
-      // 0x0FE8 0x1820 (6.0 only)
+      // 0x0FE8 0x1818 (6.0 only)
       ULONGLONG TotalSwitchOutTime;
-      // 0x0FF0 0x1828 (6.0 only) (last member in 6.0)
+      // 0x0FF0 0x1820 (6.0 only) (last member in 6.0)
       LARGE_INTEGER WaitReasonBitMap;
-      UCHAR PaddingVista[8];
+      // 0x0FF8 0x1828 (6.0 only) (for padding)
+      PVOID PaddingVista;
     };
     // 0x0FE0 0x1810 (6.1 and higher)
     struct
@@ -1346,6 +1347,7 @@ typedef struct _TEB
     };
   };
 
+  // 0x1000 0x1838 (10.0.22000 and higher)
   ULONGLONG LastSleepCounter; // Win11
   ULONG SpinCallCount;
   ULONGLONG ExtendedFeatureDisableMask;

@@ -9,6 +9,7 @@
 #include <windef.h>
 
 #define RTL_MAX_DRIVE_LETTERS 32
+#define RTL_DRIVE_LETTER_VALID (USHORT)0x0001
 
 #ifdef __cplusplus
 extern "C" {
