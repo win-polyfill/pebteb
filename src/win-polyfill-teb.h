@@ -1159,7 +1159,7 @@ typedef struct _TEB
         //6.2 and higher
         ULONG_PTR ReservedForCodeCoverage;
       };
-      // 0x0F90	 0x1778 (late 5.2 and higher)
+      // 0x0F90 0x1778 (late 5.2 and higher)
       union
       {
         // late 5.2 only
