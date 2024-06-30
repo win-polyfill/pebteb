@@ -10,6 +10,178 @@
 extern "C" {
 #endif
 
+//0x4 bytes (sizeof)
+enum _LDR_DDAG_STATE
+{
+  LdrModulesMerged = -5,
+  LdrModulesInitError = -4,
+  LdrModulesSnapError = -3,
+  LdrModulesUnloaded = -2,
+  LdrModulesUnloading = -1,
+  LdrModulesPlaceHolder = 0,
+  LdrModulesMapping = 1,
+  LdrModulesMapped = 2,
+  LdrModulesWaitingForDependencies = 3,
+  LdrModulesSnapping = 4,
+  LdrModulesSnapped = 5,
+  LdrModulesCondensed = 6,
+  LdrModulesReadyToInit = 7,
+  LdrModulesInitializing = 8,
+  LdrModulesReadyToRun = 9
+};
+
+//0x4 bytes (sizeof)
+enum _LDR_DLL_LOAD_REASON
+{
+  LoadReasonStaticDependency = 0,
+  LoadReasonStaticForwarderDependency = 1,
+  LoadReasonDynamicForwarderDependency = 2,
+  LoadReasonDelayloadDependency = 3,
+  LoadReasonDynamicLoad = 4,
+  LoadReasonAsImageLoad = 5,
+  LoadReasonAsDataLoad = 6,
+  LoadReasonUnknown = -1
+};
+
+//0x4 bytes (sizeof)
+enum _LDR_HOT_PATCH_STATE
+{
+  LdrHotPatchBaseImage = 0,
+  LdrHotPatchNotApplied = 1,
+  LdrHotPatchAppliedReverse = 2,
+  LdrHotPatchAppliedForward = 3,
+  LdrHotPatchFailedToPatch = 4,
+  LdrHotPatchStateMax = 5
+};
+
+struct _LDRP_CSLIST
+{
+  struct _SINGLE_LIST_ENTRY *Tail; //0x0
+};
+
+struct _LDR_DDAG_NODE
+{
+  struct _LIST_ENTRY Modules;                     //0x0
+  struct _LDR_SERVICE_TAG_RECORD *ServiceTagList; //0x10
+  ULONG LoadCount;                                //0x18
+  ULONG LoadWhileUnloadingCount;                  //0x1c
+  ULONG LowestLink;                               //0x20
+  struct _LDRP_CSLIST Dependencies;               //0x28
+  struct _LDRP_CSLIST IncomingDependencies;       //0x30
+  enum _LDR_DDAG_STATE State;                     //0x38
+  struct _SINGLE_LIST_ENTRY CondenseLink;         //0x40
+  ULONG PreorderNumber;                           //0x48
+};
+
+//0x18 bytes (sizeof)
+struct _RTL_BALANCED_NODE
+{
+  union
+  {
+    // 0x00 0x00
+    struct _RTL_BALANCED_NODE *Children[2];
+    struct
+    {
+      // 0x00 0x00
+      struct _RTL_BALANCED_NODE *Left;
+      // 0x04 0x08
+      struct _RTL_BALANCED_NODE *Right;
+    };
+  };
+  // 0x08 0x10
+  union
+  {
+    struct
+    {
+      UCHAR Red : 1;
+      UCHAR Balance : 2;
+    };
+    ULONGLONG ParentValue;
+  };
+};
+
+typedef struct _LDR_DATA_TABLE_ENTRY
+{
+  // 0x00 0x00 (3.10 and higher)
+  LIST_ENTRY InLoadOrderLinks;
+  // 0x08 0x10 (3.10 and higher)
+  LIST_ENTRY InMemoryOrderLinks;
+  // 0x10 0x20 (3.10 and higher)
+  union
+  {
+    // 0x10 0x20 (3.10 and higher)
+    LIST_ENTRY InInitializationOrderLinks;
+    // 0x10 0x20 (6.2 and higher)
+    LIST_ENTRY InProgressLinks;
+  };
+  VOID *DllBase;                      //0x30
+  VOID *EntryPoint;                   //0x38
+  ULONG SizeOfImage;                  //0x40
+  struct _UNICODE_STRING FullDllName; //0x48
+  struct _UNICODE_STRING BaseDllName; //0x58
+  union
+  {
+    UCHAR FlagGroup[4]; //0x68
+    ULONG Flags;        //0x68
+    struct
+    {
+      ULONG PackagedBinary : 1;          //0x68
+      ULONG MarkedForRemoval : 1;        //0x68
+      ULONG ImageDll : 1;                //0x68
+      ULONG LoadNotificationsSent : 1;   //0x68
+      ULONG TelemetryEntryProcessed : 1; //0x68
+      ULONG ProcessStaticImport : 1;     //0x68
+      ULONG InLegacyLists : 1;           //0x68
+      ULONG InIndexes : 1;               //0x68
+      ULONG ShimDll : 1;                 //0x68
+      ULONG InExceptionTable : 1;        //0x68
+      ULONG ReservedFlags1 : 2;          //0x68
+      ULONG LoadInProgress : 1;          //0x68
+      ULONG LoadConfigProcessed : 1;     //0x68
+      ULONG EntryProcessed : 1;          //0x68
+      ULONG ProtectDelayLoad : 1;        //0x68
+      ULONG ReservedFlags3 : 2;          //0x68
+      ULONG DontCallForThreads : 1;      //0x68
+      ULONG ProcessAttachCalled : 1;     //0x68
+      ULONG ProcessAttachFailed : 1;     //0x68
+      ULONG CorDeferredValidate : 1;     //0x68
+      ULONG CorImage : 1;                //0x68
+      ULONG DontRelocate : 1;            //0x68
+      ULONG CorILOnly : 1;               //0x68
+      ULONG ChpeImage : 1;               //0x68
+      ULONG ChpeEmulatorImage : 1;       //0x68
+      ULONG ReservedFlags5 : 1;          //0x68
+      ULONG Redirected : 1;              //0x68
+      ULONG ReservedFlags6 : 2;          //0x68
+      ULONG CompatDatabaseProcessed : 1; //0x68
+    };
+  };
+  USHORT ObsoleteLoadCount;                                //0x6c
+  USHORT TlsIndex;                                         //0x6e
+  LIST_ENTRY HashLinks;                                    //0x70
+  ULONG TimeDateStamp;                                     //0x80
+  struct _ACTIVATION_CONTEXT *EntryPointActivationContext; //0x88
+  VOID *Lock;                                              //0x90
+  struct _LDR_DDAG_NODE *DdagNode;                         //0x98
+  LIST_ENTRY NodeModuleLink;                               //0xa0
+  struct _LDRP_LOAD_CONTEXT *LoadContext;                  //0xb0
+  VOID *ParentDllBase;                                     //0xb8
+  VOID *SwitchBackContext;                                 //0xc0
+  struct _RTL_BALANCED_NODE BaseAddressIndexNode;          //0xc8
+  struct _RTL_BALANCED_NODE MappingInfoIndexNode;          //0xe0
+  ULONGLONG OriginalBase;                                  //0xf8
+  union _LARGE_INTEGER LoadTime;                           //0x100
+  ULONG BaseNameHashValue;                                 //0x108
+  enum _LDR_DLL_LOAD_REASON LoadReason;                    //0x10c
+  ULONG ImplicitPathOptions;                               //0x110
+  ULONG ReferenceCount;                                    //0x114
+  ULONG DependentLoadFlags;                                //0x118
+  UCHAR SigningLevel;                                      //0x11c
+  ULONG CheckSum;                                          //0x120
+  VOID *ActivePatchImageBase;                              //0x128
+  enum _LDR_HOT_PATCH_STATE HotPatchState;                 //0x130
+} LDR_DATA_TABLE_ENTRY;
+
 // ==PEB_LDR_DATA==
 // https://www.geoffchappell.com/studies/windows/km/ntoskrnl/inc/api/ntpsapi_x/peb_ldr_data.htm?tx=185
 // The PEB_LDR_DATA structure is the defining record of which user-mode modules
