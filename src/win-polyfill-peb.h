@@ -156,7 +156,14 @@ typedef struct _LDR_DATA_TABLE_ENTRY
       ULONG CompatDatabaseProcessed : 1; //0x68
     };
   };
-  USHORT ObsoleteLoadCount;                                //0x6c
+  // 0x38 0x6C 3.10 to 6.1
+  union
+  {
+    // 3.10 to 6.1 (3.10 and higher)
+    USHORT LoadCount;
+    // 6.2 and higher
+    USHORT ObsoleteLoadCount;
+  };
   USHORT TlsIndex;                                         //0x6e
   LIST_ENTRY HashLinks;                                    //0x70
   ULONG TimeDateStamp;                                     //0x80
